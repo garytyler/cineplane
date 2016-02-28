@@ -11,14 +11,14 @@ public class Zoom : MonoBehaviour {
 	float focalLengthInMm = 16;
 	float sensorHeightInMm = (35f * (9f/16f));
 	TextMesh focalLengthText;
-	Camera camera;
+	Camera cameraMain;
 	
 	// Use this for initialization
 	void Start () {
 		viveInput = GameObject.Find ("ViveInput").GetComponent<ViveInput> ();
 		cameraPlayback = GameObject.Find ("CameraPlayback").GetComponent<CameraPlayback> ();
 		focalLengthText = GameObject.Find ("FocalLengthText").GetComponent<TextMesh> ();
-		camera = GameObject.Find ("Main Camera").GetComponent<Camera>();
+		cameraMain = GameObject.Find ("Main Camera").GetComponent<Camera>();
 	}
 	
 	void Update() {
@@ -34,7 +34,7 @@ public class Zoom : MonoBehaviour {
 		}
 
 		if (!cameraPlayback.on) {
-			camera.fieldOfView = fov;
+			cameraMain.fieldOfView = fov;
 		}
 
 		ChangeFocalLengthMonitorDisplay ();

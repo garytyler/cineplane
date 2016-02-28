@@ -45,35 +45,18 @@ public class SettingsMenu2 : MonoBehaviour {
 		menu.transform.position = hmd.transform.position;
 		Vector3 hmdRotation = hmd.transform.rotation.eulerAngles;
 		menu.transform.rotation = Quaternion.Euler (new Vector3(hmdRotation.x, hmdRotation.y, 0));
-		Util.SetChildRenderersEnabled (mainMenu, true);
-		Util.SetChildMenuCubesEnabled (mainMenu, true);
+
 		normalLight.enabled = false;
 	}
 
 	void TurnOff() {
 		on = false;
-		Util.SetChildRenderersEnabled (menu, false);
-		Util.SetChildMenuCubesEnabled (menu, false);
+
 		normalLight.enabled = true;
 	}
 
 	public void Press(string cubeName) {
-		if (cubeName == "Tabletop") {
-			Util.SetChildRenderersEnabled(mainMenu, false);
-			Util.SetChildMenuCubesEnabled(mainMenu, false);
 
-			Util.SetChildRenderersEnabled(tabletopMenu, true);
-			Util.SetChildMenuCubesEnabled(tabletopMenu, true);
-		}
-
-		if (cubeName == "Playback") {
-			Util.SetChildRenderersEnabled(mainMenu, false);
-			Util.SetChildMenuCubesEnabled(mainMenu, false);
-
-			Util.SetChildRenderersEnabled(playbackMenu, true);
-			Util.SetChildMenuCubesEnabled(playbackMenu, true);
-
-		}
 
 		if (cubeName == "TabletopMode") {
 			tabletopSettings.SetTabletopMode(true);

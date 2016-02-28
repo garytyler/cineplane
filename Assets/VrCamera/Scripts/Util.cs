@@ -9,11 +9,7 @@ public static class Util {
             r.enabled = enabled;
     }
 
-	static public void SetChildMenuCubesEnabled(GameObject gameObject, bool enabled)
-	{
-		foreach (MenuCube m in gameObject.GetComponentsInChildren<MenuCube>())
-			m.enabled = enabled;
-	}
+
 
 	static public void PlayFromStart(Animation animation) {
 		//animation.clip.Rewind (); // [0]. .Rewind ();

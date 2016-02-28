@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Xml;
 using System.Xml.Serialization;
 using System.IO;
@@ -8,12 +9,9 @@ using System.IO;
 public class VrCamera : MonoBehaviour {
 
     private int numOfRecordedFrames = 0;
-    private Vector3[] cameraPositions;
-	private Vector3[] cameraRotations;
-	private float[] cameraZooms;
-
-	private Vector3[] puppetPositions;
-	private Vector3[] puppetRotations;
+	private List<Vector3> cameraPositions;
+	private List<Vector3> cameraRotations;
+	private List<float> cameraZooms;
 
 	private ViveInput viveInput;
 	private TimeCode timecode;
@@ -34,12 +32,10 @@ public class VrCamera : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-        cameraPositions = new Vector3[9000];
-		cameraRotations = new Vector3[9000];
-		cameraZooms = new float[9000];
+		cameraPositions = new List<Vector3> ();
+		cameraRotations = new List<Vector3> ();
+		cameraZooms = new List<float> ();
 
-		puppetPositions = new Vector3[9000];
-		puppetRotations = new Vector3[9000];
 		recording = false;
 
 		viveInput = GameObject.Find("ViveInput").GetComponent<ViveInput>();
@@ -62,7 +58,6 @@ public class VrCamera : MonoBehaviour {
 		if (viveInput.right.topButton.pressedDown) {
 			if (!recording) {
 				StartRecording ();
-				Debug.Log("Start recording!");
 			} else {
 				StopRecording ();
 			}
@@ -73,36 +68,33 @@ public class VrCamera : MonoBehaviour {
 		}		
     }
 
-	public Vector3[] GetCameraPositions() {
-		return cameraPositions;
-	}
+	private List<ShotData> shotDatas = new List<ShotData>();
+	private ShotData currentShotData;
 
-	public Vector3[] GetCameraRotations() {
-		return cameraRotations;
+	public List<Vector3> GetCameraPositions() {
+		return currentShotData.cameraPositions;
 	}
-
-	public Vector3[] GetPuppetPositions() {
-		return puppetPositions;
+	public List<Vector3> GetCameraRotations() {
+		return currentShotData.cameraRotations;
 	}
-	
-	public Vector3[] GetPuppetRotations() {
-		return puppetRotations;
-	}
-
-	public float[] GetCameraZooms() {
-		return cameraZooms;
+	public List<float> GetCameraZooms() {
+		return currentShotData.cameraZooms;
 	}
 
 	void StartRecording()
 	{
+		MakeNextShotData ();
+
 		recording = true;
 		alembicExporter.BeginCapture();
-		//animationDirector.RestartAllAnimations();
+		animationDirector.RestartAllAnimations();
 		if (cameraPlayback.on) {
 			cameraPlayback.StopPlayback ();
 		}
 		//clipScreenshot.TakeHiResShot();
+		print ("Should say RECORD");
 		operatorModeDisplay.SetMode ("record");
+	
 	}
 	
 	public void StopRecording() 
@@ -112,32 +104,33 @@ public class VrCamera : MonoBehaviour {
 		operatorModeDisplay.SetMode ("standby");
 	}
 
-	float[] GetTimes() {
-		float[] timesArray = new float[numOfRecordedFrames];
+	List<float> GetTimes() {
+		List<float> timesList = new List<float> (numOfRecordedFrames);
 		for (int i = 0; i < numOfRecordedFrames; i++) {
-			timesArray[i] = i * 0.0111f;
+			timesList[i] = i * 0.0111f;
 		}
-		return timesArray;
+		return timesList;
+	}
+
+	private void MakeNextShotData () {
+		if (currentShotData != null) {
+			shotDatas.Add (currentShotData);
+		}
+		currentShotData = new ShotData ();
 	}
 
 	void Record() {
-		Vector3 position = operatorLens.transform.position; 
-		cameraPositions [numOfRecordedFrames] = position;
-		Vector3 eulerAngles = operatorLens.transform.rotation.eulerAngles; 
-		cameraRotations [numOfRecordedFrames] = eulerAngles;
-		cameraZooms [numOfRecordedFrames] = camera.fieldOfView;
+		Vector3 position = operatorLens.transform.position;
+		Vector3 eulerAngles = operatorLens.transform.rotation.eulerAngles;
 
-		/*if (settingsMenu.menuMode == "puppet") {
-			Vector3 puppetPosition = viveInput.left.gameObject.transform.position;
-			puppetPositions [numOfRecordedFrames] = puppetPosition;
-			Vector3 puppetAngles = viveInput.left.gameObject.transform.rotation.eulerAngles;
-			puppetRotations [numOfRecordedFrames] = puppetAngles;
-		}*/
+		currentShotData.cameraPositions.Add(position);
+		currentShotData.cameraRotations.Add(eulerAngles);
+		currentShotData.cameraZooms.Add(camera.fieldOfView);
+
+		//Below will instantiate little purple geometry along the camera path
+//		Instantiate(cameraPathPixel, position, Quaternion.Euler(eulerAngles));
 
 		// Sets the timecode display to the currently recorded frame.
-
-		// Instantiate(cameraPathPixel, position, Quaternion.Euler(eulerAngles));
-
 		timecode.frame = numOfRecordedFrames;
 		numOfRecordedFrames++;
 	}

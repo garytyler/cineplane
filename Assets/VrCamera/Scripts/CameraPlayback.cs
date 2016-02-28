@@ -1,12 +1,17 @@
 ﻿using UnityEngine;
+using System.IO;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 public class CameraPlayback : MonoBehaviour {
 
 	public GameObject Operator;
-	Vector3[] cameraPositions;
-	Vector3[] cameraRotations;
-	float[] cameraZooms;
+	public ShotData shotData;
+	public List<Vector3> cameraPositions;
+	public List<Vector3> cameraRotations;
+	public List<float> cameraZooms;
+
 	int frameIndex = 0;
 	public bool on = false;
 	public GameObject operatorLens;
@@ -18,7 +23,6 @@ public class CameraPlayback : MonoBehaviour {
 	private AnimationDirector animationDirector;
 	private Camera camera;
 	private VrCamera vrCamera;
-	private PuppetPlayback puppetPlayback;
 
 	// Use this for initialization
 	void Start () {
@@ -28,13 +32,17 @@ public class CameraPlayback : MonoBehaviour {
 		camera = GameObject.Find ("Main Camera").GetComponent<Camera> (); 
 		vrCamera = GameObject.Find ("Operator").GetComponent<VrCamera> (); 
 		operatorModeDisplay = GameObject.Find ("ModeDisplay").GetComponent<OperatorModeDisplay> ();
-		puppetPlayback = GameObject.Find ("PuppetPlayback").GetComponent<PuppetPlayback> ();
 		operatorLens = GameObject.Find ("OperatorLens");
 	}
 	
 	// Update is called once per frame
 	void Update () {
-/*		if (viveInput.right.trigger.pressedDown) {
+
+
+
+	/*
+
+		if (viveInput.right.trigger.pressedDown) {
 			if (on) {
 				StopPlayback ();
 			} else if (!on) {
@@ -42,7 +50,7 @@ public class CameraPlayback : MonoBehaviour {
 			}
 		
 		}
-*/	
+
 		if (!on) {
 			transform.position = operatorLens.transform.position;
 			transform.rotation = operatorLens.transform.rotation;
@@ -50,12 +58,11 @@ public class CameraPlayback : MonoBehaviour {
 
 		if (on) {
 			if (vrCamera.AtEndOfRecording (frameIndex)) {
-				puppetPlayback.Restart ();
 				animationDirector.RestartAllAnimations();
 				frameIndex = 0;
 			}
 
-			transform.position = cameraPositions [frameIndex];
+			transform.position = cameraPositions[frameIndex];
 			transform.rotation = Quaternion.Euler(cameraRotations[frameIndex]);
 			camera.fieldOfView = cameraZooms[frameIndex];
 
@@ -63,6 +70,9 @@ public class CameraPlayback : MonoBehaviour {
 			timecode.frame = frameIndex;
 			frameIndex++;
 		}
+
+	*/
+	
 	}
 
 	public void TogglePlayback() {
@@ -76,7 +86,6 @@ public class CameraPlayback : MonoBehaviour {
 	public void StopPlayback() {
 		on = false;
 		operatorModeDisplay.SetMode ("standby");
-		puppetPlayback.TurnOff ();
 	}
 
 	public void StartPlayback() {
@@ -85,8 +94,6 @@ public class CameraPlayback : MonoBehaviour {
 		cameraZooms = vrCamera.GetCameraZooms ();
 		on = true;
 		animationDirector.RestartAllAnimations();
-		puppetPlayback.Restart ();
-		puppetPlayback.TurnOn ();
 		frameIndex = 0;
 		if (vrCamera.recording) {
 			vrCamera.StopRecording();
