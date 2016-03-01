@@ -13,10 +13,13 @@ public class VrCamera : MonoBehaviour {
 	private List<Vector3> cameraRotations;
 	private List<float> cameraZooms;
 
+	private ShotData currentShotData;
+	public List<ShotData> shotDatas;
+
 	private ViveInput viveInput;
 	private TimeCode timecode;
 	private OperatorModeDisplay operatorModeDisplay;
-	private Camera camera;
+	private Camera cameraMain;
 	private CameraPlayback cameraPlayback;
 	private AnimationDirector animationDirector;
 	private ClipScreenshot clipScreenshot;
@@ -28,13 +31,13 @@ public class VrCamera : MonoBehaviour {
 
 	public bool recording = false;
 
-	public GameObject cameraPathPixel;
-
 	// Use this for initialization
 	void Start () {
 		cameraPositions = new List<Vector3> ();
 		cameraRotations = new List<Vector3> ();
-		cameraZooms = new List<float> ();
+        cameraZooms = new List<float>();
+
+        shotDatas = new List<ShotData>();
 
 		recording = false;
 
@@ -42,19 +45,18 @@ public class VrCamera : MonoBehaviour {
 		timecode = GameObject.Find("Timecode").GetComponent<TimeCode> ();
 		operatorModeDisplay = GameObject.Find ("ModeDisplay").GetComponent<OperatorModeDisplay> ();
 		animationDirector = GameObject.Find ("AnimationDirector").GetComponent<AnimationDirector> ();
-		camera = GameObject.Find ("Main Camera").GetComponent<Camera> (); 
+		cameraMain = GameObject.Find ("CameraMain").GetComponent<Camera> (); 
 		cameraPlayback = GameObject.Find ("CameraPlayback").GetComponent<CameraPlayback> (); 
-		clipScreenshot = GameObject.Find("Main Camera").GetComponent<ClipScreenshot>();
+		clipScreenshot = GameObject.Find("CameraMain").GetComponent<ClipScreenshot>();
 		//settingsMenu = GameObject.Find ("Menu").GetComponent<SettingsMenu> ();
-
 		operatorLens = GameObject.Find ("OperatorLens");
-
 		alembicExporter = GameObject.Find ("AlembicExporter").GetComponent<AlembicExporter> ();
 
 	}
 
 	// Update is called once per frame
 	void Update () {
+
 		if (viveInput.right.topButton.pressedDown) {
 			if (!recording) {
 				StartRecording ();
@@ -62,14 +64,15 @@ public class VrCamera : MonoBehaviour {
 				StopRecording ();
 			}
 		}
-
 		if (recording) {
 			Record();
 		}		
     }
 
-	private List<ShotData> shotDatas = new List<ShotData>();
-	private ShotData currentShotData;
+
+
+/***********************************************************************************/
+//These Methods are used in CameraPlayback.cs
 
 	public List<Vector3> GetCameraPositions() {
 		return currentShotData.cameraPositions;
@@ -81,22 +84,36 @@ public class VrCamera : MonoBehaviour {
 		return currentShotData.cameraZooms;
 	}
 
+/**********************************************************************************/
+
+
 	void StartRecording()
 	{
-		MakeNextShotData ();
+		print (currentShotData);
+
+		if (currentShotData != null) {
+			shotDatas.Add (currentShotData);
+		}
+
+        Debug.Log("ShotDatas =" + shotDatas.Count);
+        
+
+		currentShotData = new ShotData ();
 
 		recording = true;
+
 		alembicExporter.BeginCapture();
+
 		animationDirector.RestartAllAnimations();
 		if (cameraPlayback.on) {
 			cameraPlayback.StopPlayback ();
 		}
 		//clipScreenshot.TakeHiResShot();
-		print ("Should say RECORD");
 		operatorModeDisplay.SetMode ("record");
-	
 	}
-	
+		
+
+
 	public void StopRecording() 
 	{
 		recording = false;
@@ -112,23 +129,20 @@ public class VrCamera : MonoBehaviour {
 		return timesList;
 	}
 
-	private void MakeNextShotData () {
-		if (currentShotData != null) {
-			shotDatas.Add (currentShotData);
-		}
-		currentShotData = new ShotData ();
-	}
+
+
 
 	void Record() {
+
 		Vector3 position = operatorLens.transform.position;
 		Vector3 eulerAngles = operatorLens.transform.rotation.eulerAngles;
 
 		currentShotData.cameraPositions.Add(position);
 		currentShotData.cameraRotations.Add(eulerAngles);
-		currentShotData.cameraZooms.Add(camera.fieldOfView);
+		currentShotData.cameraZooms.Add(cameraMain.fieldOfView);
 
-		//Below will instantiate little purple geometry along the camera path
-//		Instantiate(cameraPathPixel, position, Quaternion.Euler(eulerAngles));
+
+		//print (currentShotData);
 
 		// Sets the timecode display to the currently recorded frame.
 		timecode.frame = numOfRecordedFrames;

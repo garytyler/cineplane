@@ -18,7 +18,7 @@ public class Zoom : MonoBehaviour {
 		viveInput = GameObject.Find ("ViveInput").GetComponent<ViveInput> ();
 		cameraPlayback = GameObject.Find ("CameraPlayback").GetComponent<CameraPlayback> ();
 		focalLengthText = GameObject.Find ("FocalLengthText").GetComponent<TextMesh> ();
-		cameraMain = GameObject.Find ("Main Camera").GetComponent<Camera>();
+		cameraMain = GameObject.Find ("CameraMain").GetComponent<Camera>();
 	}
 	
 	void Update() {

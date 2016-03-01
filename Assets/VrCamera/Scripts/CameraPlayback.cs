@@ -21,7 +21,7 @@ public class CameraPlayback : MonoBehaviour {
 	private TimeCode timecode;
 	private OperatorModeDisplay operatorModeDisplay;
 	private AnimationDirector animationDirector;
-	private Camera camera;
+	private Camera cameraMain;
 	private VrCamera vrCamera;
 
 	// Use this for initialization
@@ -29,7 +29,7 @@ public class CameraPlayback : MonoBehaviour {
 		viveInput = GameObject.Find("ViveInput").GetComponent<ViveInput>();
 		timecode = GameObject.Find ("Timecode").GetComponent<TimeCode> ();
 		animationDirector = GameObject.Find ("AnimationDirector").GetComponent<AnimationDirector> ();
-		camera = GameObject.Find ("Main Camera").GetComponent<Camera> (); 
+		cameraMain = GameObject.Find ("CameraMain").GetComponent<Camera> (); 
 		vrCamera = GameObject.Find ("Operator").GetComponent<VrCamera> (); 
 		operatorModeDisplay = GameObject.Find ("ModeDisplay").GetComponent<OperatorModeDisplay> ();
 		operatorLens = GameObject.Find ("OperatorLens");
@@ -40,7 +40,7 @@ public class CameraPlayback : MonoBehaviour {
 
 
 
-	/*
+	
 
 		if (viveInput.right.trigger.pressedDown) {
 			if (on) {
@@ -64,14 +64,14 @@ public class CameraPlayback : MonoBehaviour {
 
 			transform.position = cameraPositions[frameIndex];
 			transform.rotation = Quaternion.Euler(cameraRotations[frameIndex]);
-			camera.fieldOfView = cameraZooms[frameIndex];
+			cameraMain.fieldOfView = cameraZooms[frameIndex];
 
 			// Sets the displayed timecode to the playing back frame.
 			timecode.frame = frameIndex;
 			frameIndex++;
 		}
 
-	*/
+	
 	
 	}
 
