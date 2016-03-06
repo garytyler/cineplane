@@ -15,7 +15,7 @@ public class VrCamera : MonoBehaviour {
 	private CameraPlayback cameraPlayback;
 	private AnimationDirector animationDirector;
 	private ClipScreenshot clipScreenshot;
-	//private SettingsMenu settingsMenu;
+
 
 	private GameObject operatorLens;
 
@@ -38,7 +38,6 @@ public class VrCamera : MonoBehaviour {
 		cameraMain = GameObject.Find ("CameraMain").GetComponent<Camera> (); 
 		cameraPlayback = GameObject.Find ("CameraPlayback").GetComponent<CameraPlayback> (); 
 		clipScreenshot = GameObject.Find("CameraMain").GetComponent<ClipScreenshot>();
-		//settingsMenu = GameObject.Find ("Menu").GetComponent<SettingsMenu> ();
 		operatorLens = GameObject.Find ("OperatorLens");
 		alembicExporter = GameObject.Find ("AlembicExporter").GetComponent<AlembicExporter> ();
 
