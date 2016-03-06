@@ -6,15 +6,7 @@ using System.Xml;
 using System.Xml.Serialization;
 using System.IO;
 
-public class VrCamera : MonoBehaviour {
-
-    private int numOfRecordedFrames = 0;
-	private List<Vector3> cameraPositions;
-	private List<Vector3> cameraRotations;
-	private List<float> cameraZooms;
-
-	private ShotData currentShotData;
-	public List<ShotData> shotDatas;
+public class VrCamera : MonoBehaviour { 
 
 	private ViveInput viveInput;
 	private TimeCode timecode;
@@ -36,8 +28,6 @@ public class VrCamera : MonoBehaviour {
 		cameraPositions = new List<Vector3> ();
 		cameraRotations = new List<Vector3> ();
         cameraZooms = new List<float>();
-
-        shotDatas = new List<ShotData>();
 
 		recording = false;
 
@@ -75,30 +65,67 @@ public class VrCamera : MonoBehaviour {
 //These Methods are used in CameraPlayback.cs
 
 	public List<Vector3> GetCameraPositions() {
-		return currentShotData.cameraPositions;
+		return currentCameraData.cameraPositions;
 	}
 	public List<Vector3> GetCameraRotations() {
-		return currentShotData.cameraRotations;
+		return currentCameraData.cameraRotations;
 	}
 	public List<float> GetCameraZooms() {
-		return currentShotData.cameraZooms;
+		return currentCameraData.cameraZooms;
 	}
 
-/**********************************************************************************/
+    /**********************************************************************************/
+
+    private int numOfRecordedFrames = 0;
+    private List<Vector3> cameraPositions;
+    private List<Vector3> cameraRotations;
+    private List<float> cameraZooms;
+
+    private CameraData currentCameraData;
+
+    private List<CameraData> cameraDatas = new List<CameraData>();
 
 
-	void StartRecording()
+    
+
+
+
+
+    private List<ClipData> lcd = ClipInventoryData.clipDatas; //clipDatas is a static variable in ClipInventoryData.cs which is why I can call it like this
+
+
+    public void PrintClipDatas()
+    {
+        foreach (ClipData cd in lcd)
+        {
+            print(cd.cameraDatas);
+        }
+    }
+
+
+
+
+
+    void StartRecording()
 	{
-		print (currentShotData);
-
-		if (currentShotData != null) {
-			shotDatas.Add (currentShotData);
-		}
-
-        Debug.Log("ShotDatas =" + shotDatas.Count);
+        print ("StartRecording currentCameraData =" + currentCameraData);
+        PrintClipDatas();
+        if (cameraDatas != null)
+        {
+            Debug.Log("cameraDatas is not null");
+            
+        }
         
 
-		currentShotData = new ShotData ();
+
+        if (currentCameraData != null) {
+			cameraDatas.Add (currentCameraData);   // This is where the currentCameraData gets added to a list somewhere
+		}
+
+        Debug.Log("After ClipData.cameraDatas.Add" + cameraDatas);
+        
+
+		currentCameraData = new CameraData ();
 
 		recording = true;
 
@@ -116,9 +143,11 @@ public class VrCamera : MonoBehaviour {
 
 	public void StopRecording() 
 	{
-		recording = false;
+        
+        recording = false;
 		alembicExporter.EndCapture();
 		operatorModeDisplay.SetMode ("standby");
+
 	}
 
 	List<float> GetTimes() {
@@ -137,12 +166,12 @@ public class VrCamera : MonoBehaviour {
 		Vector3 position = operatorLens.transform.position;
 		Vector3 eulerAngles = operatorLens.transform.rotation.eulerAngles;
 
-		currentShotData.cameraPositions.Add(position);
-		currentShotData.cameraRotations.Add(eulerAngles);
-		currentShotData.cameraZooms.Add(cameraMain.fieldOfView);
+		currentCameraData.cameraPositions.Add(position);
+        currentCameraData.cameraRotations.Add(eulerAngles);
+        currentCameraData.cameraZooms.Add(cameraMain.fieldOfView);
 
 
-		//print (currentShotData);
+		//print (currentCapturedShotData);
 
 		// Sets the timecode display to the currently recorded frame.
 		timecode.frame = numOfRecordedFrames;

@@ -7,7 +7,6 @@ using System.Linq;
 public class CameraPlayback : MonoBehaviour {
 
 	public GameObject Operator;
-	public ShotData shotData;
 	public List<Vector3> cameraPositions;
 	public List<Vector3> cameraRotations;
 	public List<float> cameraZooms;

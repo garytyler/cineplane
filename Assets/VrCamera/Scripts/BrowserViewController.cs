@@ -1,10 +1,16 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
-public class ShotBrowser : MonoBehaviour {
+public class BrowserViewController : MonoBehaviour {
 
+ 
+    
 	// Use this for initialization
 	void Start () {
+
+     
+      
 	
 	}
 	
