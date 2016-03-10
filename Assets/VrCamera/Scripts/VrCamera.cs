@@ -6,6 +6,7 @@ using System.Xml;
 using System.Xml.Serialization;
 using System.IO;
 
+
 public class VrCamera : MonoBehaviour { 
 
 	private ViveInput viveInput;
@@ -39,9 +40,9 @@ public class VrCamera : MonoBehaviour {
 		cameraPlayback = GameObject.Find ("CameraPlayback").GetComponent<CameraPlayback> (); 
 		clipScreenshot = GameObject.Find("CameraMain").GetComponent<ClipScreenshot>();
 		operatorLens = GameObject.Find ("OperatorLens");
-		alembicExporter = GameObject.Find ("AlembicExporter").GetComponent<AlembicExporter> ();
+        alembicExporter = GameObject.Find("AlembicExporter").GetComponent<AlembicExporter> ();
 
-	}
+    }
 
 	// Update is called once per frame
 	void Update () {
