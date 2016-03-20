@@ -1,69 +1,84 @@
 ﻿using UnityEngine;
 using System.IO;
-using System.Collections;
+using System.Collections;   
 using System.Collections.Generic;
 using System.Linq;
 
-public class CameraPlayback : MonoBehaviour {
+public class CpPlayback : MonoBehaviour {
 
-	public GameObject Operator;
+   // public GameObject Operator;
+
 	public List<Vector3> cameraPositions;
 	public List<Vector3> cameraRotations;
 	public List<float> cameraZooms;
 
-	int frameIndex = 0;
-	public bool on = false;
-	public GameObject operatorLens;
+    CpCamController cpCamController;
+    GameObject cpCamera;
+    Camera mainCamera;
+    int frameIndex = 0;
+	public bool playbackOn = false;
+
+   
 
 
-	private ViveInput viveInput;
-	private TimeCode timecode;
+
+    //private ViveInput viveInput;
+    private TimeCode timecode;
 	private OperatorModeDisplay operatorModeDisplay;
 	private AnimationDirector animationDirector;
-	private Camera cameraMain;
-	private VrCamera vrCamera;
+
+	
+
+   
 
 	// Use this for initialization
 	void Start () {
-		viveInput = GameObject.Find("ViveInput").GetComponent<ViveInput>();
+
+        cpCamera = GameObject.FindGameObjectWithTag("MainCamera");
+
+
+
 		timecode = GameObject.Find ("Timecode").GetComponent<TimeCode> ();
 		animationDirector = GameObject.Find ("AnimationDirector").GetComponent<AnimationDirector> ();
-		cameraMain = GameObject.Find ("CameraMain").GetComponent<Camera> (); 
-		vrCamera = GameObject.Find ("Operator").GetComponent<VrCamera> (); 
+
+		 
 		operatorModeDisplay = GameObject.Find ("ModeDisplay").GetComponent<OperatorModeDisplay> ();
-		operatorLens = GameObject.Find ("OperatorLens");
+        
+        
 	}
 	
 	// Update is called once per frame
 	void Update () {
 
-
-
-	
-
-		if (viveInput.right.trigger.pressedDown) {
-			if (on) {
+        /*
+        if (device.GetPress(SteamVR_Controller.ButtonMask.Trigger))
+        {
+			if (playbackOn)
+            {
 				StopPlayback ();
-			} else if (!on) {
+			}
+            else if (!playbackOn)
+            {
 				StartPlayback();
 			}
-		
+		}
+        */
+
+
+		if (!playbackOn) {
+			transform.position = cpCamera.transform.position;
+			transform.rotation = cpCamera.transform.rotation;
 		}
 
-		if (!on) {
-			transform.position = operatorLens.transform.position;
-			transform.rotation = operatorLens.transform.rotation;
-		}
-
-		if (on) {
-			if (vrCamera.AtEndOfRecording (frameIndex)) {
+		if (playbackOn) {
+			if (cpCamController.AtEndOfRecording (frameIndex)) {
 				animationDirector.RestartAllAnimations();
 				frameIndex = 0;
 			}
 
 			transform.position = cameraPositions[frameIndex];
 			transform.rotation = Quaternion.Euler(cameraRotations[frameIndex]);
-			cameraMain.fieldOfView = cameraZooms[frameIndex];
+			mainCamera.fieldOfView = cameraZooms[frameIndex];
 
 			// Sets the displayed timecode to the playing back frame.
 			timecode.frame = frameIndex;
@@ -75,27 +90,27 @@ public class CameraPlayback : MonoBehaviour {
 	}
 
 	public void TogglePlayback() {
-		if (on) {
+		if (playbackOn) {
 			StopPlayback ();
-		} else if (!on){
+		} else if (!playbackOn){
 			StartPlayback ();
 		}
 	}
 
 	public void StopPlayback() {
-		on = false;
+		playbackOn = false;
 		operatorModeDisplay.SetMode ("standby");
 	}
 
 	public void StartPlayback() {
-		cameraPositions = vrCamera.GetCameraPositions ();
-		cameraRotations = vrCamera.GetCameraRotations ();
-		cameraZooms = vrCamera.GetCameraZooms ();
-		on = true;
+		cameraPositions = cpCamController.GetCameraPositions ();
+		cameraRotations = cpCamController.GetCameraRotations ();
+		cameraZooms = cpCamController.GetCameraZooms ();
+		playbackOn = true;
 		animationDirector.RestartAllAnimations();
 		frameIndex = 0;
-		if (vrCamera.recording) {
-			vrCamera.StopRecording();
+		if (cpCamController.recordingOn) {
+            cpCamController.StopRecording();
 		}
 		operatorModeDisplay.SetMode ("playback");
 	}

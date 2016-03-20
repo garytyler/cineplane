@@ -2,7 +2,7 @@
 using System.Collections;
 
 public class PuppetSettings : MonoBehaviour {
-
+    
 	GameObject puppet;
 	public bool on;
 
@@ -25,4 +25,5 @@ public class PuppetSettings : MonoBehaviour {
 		Util.SetChildRenderersEnabled (puppet, false);
 		on = false;
     }
+    
 }
