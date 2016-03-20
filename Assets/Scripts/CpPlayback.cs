@@ -34,10 +34,12 @@ public class CpPlayback : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 
-        cpCamera = GameObject.FindGameObjectWithTag("MainCamera");
+        //cameraPositions = new List<Vector3>();
+        //cameraRotations = new List<Vector3>();
+        //cameraZooms = new List<float>();
 
 
-
+        cpCamera = GameObject.Find("CpCamera");
 		timecode = GameObject.Find ("Timecode").GetComponent<TimeCode> ();
 		animationDirector = GameObject.Find ("AnimationDirector").GetComponent<AnimationDirector> ();
 

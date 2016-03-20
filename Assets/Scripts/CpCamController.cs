@@ -6,8 +6,15 @@ using System.Collections.Generic;
 public class CpCamController : MonoBehaviour {
 
     /*CONTROLLERINPUT*/
-    SteamVR_TrackedObject trackedObj;
-    SteamVR_Controller.Device device { get { return SteamVR_Controller.Input((int)trackedObj.index); } }
+    //private Valve.VR.EVRButtonId gripButton = Valve.VR.EVRButtonId.k_EButton_Grip;
+   // private Valve.VR.EVRButtonId triggerButton = Valve.VR.EVRButtonId.k_EButton_SteamVR_Trigger;
+   // private Valve.VR.EVRButtonId applicationMenuButton = Valve.VR.EVRButtonId.k_EButton_ApplicationMenu;
+
+     SteamVR_Controller.Device controller { get { return SteamVR_Controller.Input((int)trackedObj.index); } }
+     SteamVR_TrackedObject trackedObj;
+
+   
+    
 
     /*OTHER*/
     public bool recordingOn;
@@ -29,12 +36,12 @@ public class CpCamController : MonoBehaviour {
 
     // Use this for initialization
     void Start() {
+        trackedObj = GetComponent<SteamVR_TrackedObject>();
 
-
-        cpCamera = GameObject.Find("cpCamera");
+        cpCamera = GameObject.Find("CpCamera");
 
         recordingOn = false;
-        alembicExporter = new AlembicExporter();
+        alembicExporter = GameObject.Find("AlembicExporter").GetComponent<AlembicExporter>();
         cpPlayback = new CpPlayback();
 
         //  viveInput = GameObject.Find("ViveInput").GetComponent<ViveInput>();
@@ -43,7 +50,7 @@ public class CpCamController : MonoBehaviour {
         animationDirector = GameObject.Find("AnimationDirector").GetComponent<AnimationDirector>();
         //mainCamera = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<Camera>();
         
-        clipScreenshot = GameObject.Find("CameraMain").GetComponent<ClipScreenshot>();
+        //clipScreenshot = GameObject.Find("CameraMain").GetComponent<ClipScreenshot>();
 
         cpPlayback.playbackOn = false;
     }
@@ -52,10 +59,16 @@ public class CpCamController : MonoBehaviour {
     // Update is called once per frame
     void Update()
     {
-        /*Application Menu*/
-        if (device.GetTouchDown(SteamVR_Controller.ButtonMask.ApplicationMenu))
+        if (controller == null)
         {
-            Debug.Log("APPLICATION MENU");
+            Debug.Log("Controller not initialized");
+            return;
+        }
+
+        /*Application Menu*/
+        if (controller.GetTouchDown(SteamVR_Controller.ButtonMask.ApplicationMenu))
+        {
+            //Debug.Log("APPLICATION MENU");
             if (!recordingOn)
             {
                 StartRecording();
@@ -71,7 +84,7 @@ public class CpCamController : MonoBehaviour {
         }
 
         /*Trigger*/
-        if (device.GetTouchDown(SteamVR_Controller.ButtonMask.Trigger))
+        if (controller.GetTouchDown(SteamVR_Controller.ButtonMask.Trigger))
         {
             if (cpPlayback.playbackOn)
             {
@@ -136,7 +149,7 @@ public class CpCamController : MonoBehaviour {
 
         currentCameraData.cameraPositions.Add(position);
         currentCameraData.cameraRotations.Add(eulerAngles);
-        currentCameraData.cameraZooms.Add(cameraMain.fieldOfView);
+        currentCameraData.cameraZooms.Add(cpCamera.GetComponent<Camera>().fieldOfView);
 
         //print (currentCapturedShotData);
 
@@ -153,11 +166,11 @@ public class CpCamController : MonoBehaviour {
 
     void StartRecording()
     {
-        print("StartRecording currentCameraData =" + currentCameraData);
+        //print("StartRecording currentCameraData =" + currentCameraData);
         PrintClipDatas();
         if (cameraDatas != null)
         {
-            Debug.Log("cameraDatas is not null");
+            //Debug.Log("cameraDatas is not null");
 
         }
 
@@ -168,7 +181,7 @@ public class CpCamController : MonoBehaviour {
             cameraDatas.Add(currentCameraData);   // This is where the currentCameraData gets added to a list somewhere
         }
 
-        Debug.Log("After ClipData.cameraDatas.Add" + cameraDatas);
+        //Debug.Log("After ClipData.cameraDatas.Add" + cameraDatas);
 
 
         currentCameraData = new CameraData();
