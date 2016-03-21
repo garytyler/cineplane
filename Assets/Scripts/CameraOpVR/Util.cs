@@ -10,14 +10,14 @@ public static class Util {
         }
 
 
-    /*
+    
        static public void PlayFromStart(Animation animation) {
            //animation.clip.Rewind (); // [0]. .Rewind ();
            //animation.clip.
            animation.Rewind("Idle");
            animation.Play ("Idle");
        }
-
+    /*
        static public Vector3[] Vector3ArrayUntilIndex(Vector3[] array, int index) {
            Vector3[] resultArray = new Vector3[index];
            for (int i = 0; i < index; i++) {

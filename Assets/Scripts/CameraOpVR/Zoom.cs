@@ -12,13 +12,16 @@ public class Zoom : MonoBehaviour {
 	float sensorHeightInMm = (35f * (9f/16f));
 	TextMesh focalLengthText;
 	Camera cameraMain;
-	
+    CpMainCamBehavior cpMainCamBehavior;
+
+
 	// Use this for initialization
 	void Start () {
 		viveInput = GameObject.Find ("ViveInput").GetComponent<ViveInput> ();
 		cpPlayback = GameObject.Find ("CameraPlayback").GetComponent<CpPlayback> ();
 		focalLengthText = GameObject.Find ("FocalLengthText").GetComponent<TextMesh> ();
 		cameraMain = GameObject.Find ("CameraMain").GetComponent<Camera>();
+        cpMainCamBehavior = GameObject.Find("cpMainCamBehavior").GetComponent<CpMainCamBehavior>();
 	}
 	
 	void Update() {

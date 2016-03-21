@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
-
+/*
 public class TestAEUpdate : MonoBehaviour {
 
     private AlembicExporter ae;
@@ -24,3 +24,4 @@ public class TestAEUpdate : MonoBehaviour {
 	
 	}
 }
+*/

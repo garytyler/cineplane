@@ -1,19 +1,17 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Recorder : MonoBehaviour {
+public class CpManager : MonoBehaviour {
 
+   
 	// Use this for initialization
 	void Start () {
-	
+
+	    
 	}
 	
 	// Update is called once per frame
 	void Update () {
 	
 	}
-
-
-   
-
 }

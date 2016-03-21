@@ -7,7 +7,7 @@ public class ZoomSettings : MonoBehaviour {
 	GameObject zoomMenu;
 	ViveInput viveInput;
 	bool zoomEnabled = true;
-	CpPlayback cpPlayback;
+	//CpPlayback cpPlayback;
 	float fov = 63.25f;
 	float focalLengthInMm = 16;
 	float sensorHeightInMm = (35f * (9f/16f));
@@ -26,7 +26,7 @@ public class ZoomSettings : MonoBehaviour {
 	void Start () {
 		zoomMenu = GameObject.Find ("ZoomMenu");
 		viveInput = GameObject.Find ("ViveInput").GetComponent<ViveInput> ();
-		cpPlayback = GameObject.Find ("CameraPlayback").GetComponent<CpPlayback> ();
+		//cpPlayback = GameObject.Find ("CameraPlayback").GetComponent<CpPlayback> ();
 		focalLengthText = GameObject.Find ("FocalLengthText").GetComponent<TextMesh> ();
 		zoomOnText = GameObject.Find ("ZoomOnText").GetComponent<TextMesh> ();
 		zoomOffText = GameObject.Find ("ZoomOffText").GetComponent<TextMesh> ();
