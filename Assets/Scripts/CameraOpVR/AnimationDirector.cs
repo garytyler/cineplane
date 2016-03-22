@@ -15,8 +15,8 @@ public class AnimationDirector : MonoBehaviour {
 	}
 
 	public void RestartAllAnimations() {
-		foreach (Animation animation in animations) {
-			Util.PlayFromStart (animation);
-		}
+		//foreach (Animation animation in animations) {
+		//	Util.PlayFromStart (animation);
+		//}
 	}
 }

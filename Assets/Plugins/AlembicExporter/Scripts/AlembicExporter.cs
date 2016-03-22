@@ -645,6 +645,7 @@ public class AlembicExporter : MonoBehaviour
     public bool BeginCapture()
     {
         if(m_recording) {
+            Debug.Log("AlembicExporter: already started");
             return false;
         }
 
@@ -678,7 +679,7 @@ public class AlembicExporter : MonoBehaviour
             Time.maximumDeltaTime = (1.0f / m_conf.frameRate);
         }
 
-        //Debug.Log("AlembicExporter: start " + m_outputPath);
+        Debug.Log("AlembicExporter: start " + m_outputPath);
         return true;
     }
 
@@ -693,7 +694,7 @@ public class AlembicExporter : MonoBehaviour
         m_time = 0.0f;
         m_frameCount = 0;
 
-        //Debug.Log("AlembicExporter: end: " + m_outputPath);
+        Debug.Log("AlembicExporter: end: " + m_outputPath);
     }
 
     public void OneShot()
@@ -745,6 +746,8 @@ public class AlembicExporter : MonoBehaviour
         }
     }
 
+    
+
     void UpdateOutputPath()
     {
         if (m_outputPath == null || m_outputPath == "")
@@ -792,6 +795,7 @@ public class AlembicExporter : MonoBehaviour
     {
         ProcessCapture();
     }
+    /// </summary>
 
     void OnDisable()
     {
