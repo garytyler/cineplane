@@ -746,8 +746,6 @@ public class AlembicExporter : MonoBehaviour
         }
     }
 
-    
-
     void UpdateOutputPath()
     {
         if (m_outputPath == null || m_outputPath == "")
@@ -790,12 +788,6 @@ public class AlembicExporter : MonoBehaviour
             StartCoroutine(ProcessRecording());
         }
     }
-
-    public void UpdateRecording()
-    {
-        ProcessCapture();
-    }
-    /// </summary>
 
     void OnDisable()
     {

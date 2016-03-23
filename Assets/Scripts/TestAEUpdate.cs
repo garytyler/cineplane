@@ -7,7 +7,7 @@ public class TestAEUpdate : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-
+        /*
         ae = GameObject.Find("AlembicExporter").GetComponent<AlembicExporter>();
         GameObject camera = GameObject.Find("CameraMain");
         
@@ -16,7 +16,7 @@ public class TestAEUpdate : MonoBehaviour {
             camera.transform.position = new Vector3(i, 0, 0);
             ae.UpdateRecording();
         }
-            
+        */  
 	}
 	
 	// Update is called once per frame
