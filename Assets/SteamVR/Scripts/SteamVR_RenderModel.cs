@@ -15,9 +15,6 @@ public class SteamVR_RenderModel : MonoBehaviour
 	public SteamVR_TrackedObject.EIndex index = SteamVR_TrackedObject.EIndex.None;
 	public string modelOverride;
 
-	// Shader to apply to model.
-	public Shader shader;
-
 	// Enable to print out when render models are loaded.
 	public bool verbose = false;
 
@@ -59,47 +56,44 @@ public class SteamVR_RenderModel : MonoBehaviour
 	// Helper class to load render models interface on demand and clean up when done.
 	public sealed class RenderModelInterfaceHolder : System.IDisposable
 	{
-		private bool needsShutdown, failedLoadInterface;
 		private CVRRenderModels _instance;
 		public CVRRenderModels instance
 		{
 			get
 			{
-				if (_instance == null && !failedLoadInterface)
+				if (_instance == null)
 				{
-					if (!SteamVR.active && !SteamVR.usingNativeSupport)
+					var error = EVRInitError.None;
+					if (!SteamVR.active)
 					{
-						var error = EVRInitError.None;
 						OpenVR.Init(ref error, EVRApplicationType.VRApplication_Other);
-						needsShutdown = true;
+						if (error != EVRInitError.None)
+							return null;
 					}
 
-					_instance = OpenVR.RenderModels;
-					if (_instance == null)
+					var pRenderModels = OpenVR.GetGenericInterface(OpenVR.IVRRenderModels_Version, ref error);
+					if (pRenderModels == System.IntPtr.Zero || error != EVRInitError.None)
 					{
 						Debug.LogError("Failed to load IVRRenderModels interface version " + OpenVR.IVRRenderModels_Version);
-						failedLoadInterface = true;
-                    }
+						if (!SteamVR.active)
+							OpenVR.Shutdown();
+						return null;
+					}
+
+					_instance = new CVRRenderModels(pRenderModels);
 				}
 				return _instance;
 			}
 		}
 		public void Dispose()
 		{
-			if (needsShutdown)
-				OpenVR.Shutdown();
+			if (_instance != null)
+			{
+				if (!SteamVR.active)
+					OpenVR.Shutdown();
+			}
 		}
 	}
-
-	private void OnHideRenderModels(params object[] args)
-	{
-		bool hidden = (bool)args[0];
-		var meshRenderer = GetComponent<MeshRenderer>();
-		if (meshRenderer != null)
-			meshRenderer.enabled = !hidden;
-		foreach (var child in transform.GetComponentsInChildren<MeshRenderer>())
-			child.enabled = !hidden;
-    }
 
 	private void OnDeviceConnected(params object[] args)
 	{
@@ -114,18 +108,20 @@ public class SteamVR_RenderModel : MonoBehaviour
 		}
 		else
 		{
-			StripMesh(gameObject);
+			var meshRenderer = GetComponent<MeshRenderer>();
+			if (meshRenderer != null)
+				Object.DestroyImmediate(meshRenderer);
+			var meshFilter = GetComponent<MeshFilter>();
+			if (meshFilter != null)
+				Object.DestroyImmediate(meshFilter);
 		}
 	}
 
 	public void UpdateModel()
 	{
-		var system = OpenVR.System;
-		if (system == null)
-			return;
-
+		var vr = SteamVR.instance;
 		var error = ETrackedPropertyError.TrackedProp_Success;
-		var capacity = system.GetStringTrackedDeviceProperty((uint)index, ETrackedDeviceProperty.Prop_RenderModelName_String, null, 0, ref error);
+		var capacity = vr.hmd.GetStringTrackedDeviceProperty((uint)index, ETrackedDeviceProperty.Prop_RenderModelName_String, null, 0, ref error);
 		if (capacity <= 1)
 		{
 			Debug.LogError("Failed to get render model name for tracked object " + index);
@@ -133,132 +129,20 @@ public class SteamVR_RenderModel : MonoBehaviour
 		}
 
 		var buffer = new System.Text.StringBuilder((int)capacity);
-		system.GetStringTrackedDeviceProperty((uint)index, ETrackedDeviceProperty.Prop_RenderModelName_String, buffer, capacity, ref error);
+		vr.hmd.GetStringTrackedDeviceProperty((uint)index, ETrackedDeviceProperty.Prop_RenderModelName_String, buffer, capacity, ref error);
 
-		var s = buffer.ToString();
-		if (renderModelName != s)
-		{
-			renderModelName = s;
-			StartCoroutine(SetModelAsync(s));
-		}
+		SetModel(buffer.ToString());
 	}
 
-	IEnumerator SetModelAsync(string renderModelName)
+	private void SetModel(string renderModelName)
 	{
-		if (string.IsNullOrEmpty(renderModelName))
-			yield break;
-
-		// Preload all render models before asking for the data to create meshes.
-		using (var holder = new RenderModelInterfaceHolder())
-		{
-			var renderModels = holder.instance;
-			if (renderModels == null)
-				yield break;
-
-			// Gather names of render models to preload.
-			string[] renderModelNames;
-
-			var count = renderModels.GetComponentCount(renderModelName);
-			if (count > 0)
-			{
-				renderModelNames = new string[count];
-
-				for (int i = 0; i < count; i++)
-				{
-					var capacity = renderModels.GetComponentName(renderModelName, (uint)i, null, 0);
-					if (capacity == 0)
-						continue;
-
-					var componentName = new System.Text.StringBuilder((int)capacity);
-					if (renderModels.GetComponentName(renderModelName, (uint)i, componentName, capacity) == 0)
-						continue;
-
-					capacity = renderModels.GetComponentRenderModelName(renderModelName, componentName.ToString(), null, 0);
-					if (capacity == 0)
-						continue;
-
-					var name = new System.Text.StringBuilder((int)capacity);
-					if (renderModels.GetComponentRenderModelName(renderModelName, componentName.ToString(), name, capacity) == 0)
-						continue;
-
-					var s = name.ToString();
-
-					// Only need to preload if not already cached.
-					var model = models[s] as RenderModel;
-					if (model == null || model.mesh == null)
-					{
-						renderModelNames[i] = s;
-					}
-				}
-			}
-			else
-			{
-				// Only need to preload if not already cached.
-				var model = models[renderModelName] as RenderModel;
-				if (model == null || model.mesh == null)
-				{
-					renderModelNames = new string[] { renderModelName };
-				}
-				else
-				{
-					renderModelNames = new string[0];
-				}
-			}
-
-			// Keep trying every 100ms until all components finish loading.
-			while (true)
-			{
-				var loading = false;
-				foreach (var name in renderModelNames)
-				{
-					if (string.IsNullOrEmpty(name))
-						continue;
-
-					var pRenderModel = System.IntPtr.Zero;
-
-					var error = renderModels.LoadRenderModel_Async(name, ref pRenderModel);
-                    if (error == EVRRenderModelError.Loading)
-					{
-						loading = true;
-					}
-					else if (error == EVRRenderModelError.None)
-					{
-						// Preload textures as well.
-						var renderModel = (RenderModel_t)Marshal.PtrToStructure(pRenderModel, typeof(RenderModel_t));
-
-						// Check the cache first.
-						var material = materials[renderModel.diffuseTextureId] as Material;
-						if (material == null || material.mainTexture == null)
-						{
-							var pDiffuseTexture = System.IntPtr.Zero;
-
-							error = renderModels.LoadTexture_Async(renderModel.diffuseTextureId, ref pDiffuseTexture);
-							if (error == EVRRenderModelError.Loading)
-							{
-								loading = true;
-							}
-						}
-					}
-				}
-
-				if (loading)
-				{
-					yield return new WaitForSeconds(0.1f);
-				}
-				else
-				{
-					break;
-				}
-			}
-		}
-
-		bool success = SetModel(renderModelName);
-		SteamVR_Utils.Event.Send("render_model_loaded", this, success);
-	}
-
-	private bool SetModel(string renderModelName)
-	{
-		StripMesh(gameObject);
+		// Strip mesh filter and renderer as these will get re-added if needed.
+		var meshRenderer = GetComponent<MeshRenderer>();
+		if (meshRenderer != null)
+			Object.DestroyImmediate(meshRenderer);
+		var meshFilter = GetComponent<MeshFilter>();
+		if (meshFilter != null)
+			Object.DestroyImmediate(meshFilter);
 
 		using (var holder = new RenderModelInterfaceHolder())
 		{
@@ -266,11 +150,11 @@ public class SteamVR_RenderModel : MonoBehaviour
 			{
 				if (LoadComponents(holder, renderModelName))
 				{
-					UpdateComponents();
-					return true;
+					this.renderModelName = renderModelName;
+					return;
 				}
 
-				Debug.Log("[" + gameObject.name + "] Render model does not support components, falling back to single mesh.");
+				Debug.Log("Render model does not support components, falling back to single mesh.");
 			}
 
 			if (!string.IsNullOrEmpty(renderModelName))
@@ -280,46 +164,33 @@ public class SteamVR_RenderModel : MonoBehaviour
 				{
 					var renderModels = holder.instance;
 					if (renderModels == null)
-						return false;
+						return;
 
 					if (verbose)
 						Debug.Log("Loading render model " + renderModelName);
 
 					model = LoadRenderModel(renderModels, renderModelName, renderModelName);
 					if (model == null)
-						return false;
+						return;
 
 					models[renderModelName] = model;
+					this.renderModelName = renderModelName;
 				}
 
 				gameObject.AddComponent<MeshFilter>().mesh = model.mesh;
 				gameObject.AddComponent<MeshRenderer>().sharedMaterial = model.material;
-				return true;
 			}
 		}
-
-		return false;
 	}
 
-	RenderModel LoadRenderModel(CVRRenderModels renderModels, string renderModelName, string baseName)
+	static RenderModel LoadRenderModel(CVRRenderModels renderModels, string renderModelName, string baseName)
 	{
         var pRenderModel = System.IntPtr.Zero;
-
-		EVRRenderModelError error;
-		while ( true )
+        if (!renderModels.LoadRenderModel(renderModelName, ref pRenderModel))
 		{
-			error = renderModels.LoadRenderModel_Async(renderModelName, ref pRenderModel);
-			if (error != EVRRenderModelError.Loading)
-				break;
-
-			System.Threading.Thread.Sleep(1);
-		}
-
-		if (error != EVRRenderModelError.None)
-		{
-			Debug.LogError(string.Format("Failed to load render model {0} - {1}", renderModelName, error.ToString()));
+			Debug.LogError("Failed to load render model " + renderModelName);
 			return null;
-		}
+        }
 
         var renderModel = (RenderModel_t)Marshal.PtrToStructure(pRenderModel, typeof(RenderModel_t));
 
@@ -333,9 +204,9 @@ public class SteamVR_RenderModel : MonoBehaviour
 			var ptr = new System.IntPtr(renderModel.rVertexData.ToInt64() + iVert * Marshal.SizeOf(type));
 			var vert = (RenderModel_Vertex_t)Marshal.PtrToStructure(ptr, type);
 
-			vertices[iVert] = new Vector3(vert.vPosition.v0, vert.vPosition.v1, -vert.vPosition.v2);
-			normals[iVert] = new Vector3(vert.vNormal.v0, vert.vNormal.v1, -vert.vNormal.v2);
-			uv[iVert] = new Vector2(vert.rfTextureCoord0, vert.rfTextureCoord1);
+			vertices[iVert] = new Vector3(vert.vPosition.v[0], vert.vPosition.v[1], -vert.vPosition.v[2]);
+			normals[iVert] = new Vector3(vert.vNormal.v[0], vert.vNormal.v[1], -vert.vNormal.v[2]);
+			uv[iVert] = new Vector2(vert.rfTextureCoord[0], vert.rfTextureCoord[1]);
 		}
 
 		int indexCount = (int)renderModel.unTriangleCount * 3;
@@ -360,67 +231,40 @@ public class SteamVR_RenderModel : MonoBehaviour
 		//mesh.hideFlags = HideFlags.DontUnloadUnusedAsset;
 
 		// Check cache before loading texture.
-		var material = materials[renderModel.diffuseTextureId] as Material;
+		var material = materials[baseName + renderModel.diffuseTextureId] as Material;
 		if (material == null || material.mainTexture == null)
 		{
 			var pDiffuseTexture = System.IntPtr.Zero;
-
-			while (true)
-			{
-				error = renderModels.LoadTexture_Async(renderModel.diffuseTextureId, ref pDiffuseTexture);
-				if (error != EVRRenderModelError.Loading)
-					break;
-
-				System.Threading.Thread.Sleep(1);
-			}
-
-			if (error == EVRRenderModelError.None)
+			if (renderModels.LoadTexture(renderModel.diffuseTextureId, ref pDiffuseTexture))
 			{
 				var diffuseTexture = (RenderModel_TextureMap_t)Marshal.PtrToStructure(pDiffuseTexture, typeof(RenderModel_TextureMap_t));
-				var texture = new Texture2D(diffuseTexture.unWidth, diffuseTexture.unHeight, TextureFormat.ARGB32, false);
-				if (SteamVR.instance.graphicsAPI == EGraphicsAPIConvention.API_DirectX)
+
+				var textureMapData = new byte[diffuseTexture.unWidth * diffuseTexture.unHeight * 4]; // RGBA
+				Marshal.Copy(diffuseTexture.rubTextureMapData, textureMapData, 0, textureMapData.Length);
+
+				var colors = new Color32[diffuseTexture.unWidth * diffuseTexture.unHeight];
+				int iColor = 0;
+				for (int iHeight = 0; iHeight < diffuseTexture.unHeight; iHeight++)
 				{
-					texture.Apply();
-
-					while (true)
+					for (int iWidth = 0; iWidth < diffuseTexture.unWidth; iWidth++)
 					{
-						error = renderModels.LoadIntoTextureD3D11_Async(renderModel.diffuseTextureId, texture.GetNativeTexturePtr());
-						if (error != EVRRenderModelError.Loading)
-							break;
-
-						System.Threading.Thread.Sleep(1);
+						var r = textureMapData[iColor++];
+						var g = textureMapData[iColor++];
+						var b = textureMapData[iColor++];
+						var a = textureMapData[iColor++];
+						colors[iHeight * diffuseTexture.unWidth + iWidth] = new Color32(r, g, b, a);
 					}
 				}
-				else
-				{
-					var textureMapData = new byte[diffuseTexture.unWidth * diffuseTexture.unHeight * 4]; // RGBA
-					Marshal.Copy(diffuseTexture.rubTextureMapData, textureMapData, 0, textureMapData.Length);
 
-					var colors = new Color32[diffuseTexture.unWidth * diffuseTexture.unHeight];
-					int iColor = 0;
-					for (int iHeight = 0; iHeight < diffuseTexture.unHeight; iHeight++)
-					{
-						for (int iWidth = 0; iWidth < diffuseTexture.unWidth; iWidth++)
-						{
-							var r = textureMapData[iColor++];
-							var g = textureMapData[iColor++];
-							var b = textureMapData[iColor++];
-							var a = textureMapData[iColor++];
-							colors[iHeight * diffuseTexture.unWidth + iWidth] = new Color32(r, g, b, a);
-						}
-					}
+				var texture = new Texture2D(diffuseTexture.unWidth, diffuseTexture.unHeight, TextureFormat.ARGB32, true);
+				texture.SetPixels32(colors);
+				texture.Apply();
 
-					texture.SetPixels32(colors);
-					texture.Apply();
-				}
-
-				material = new Material(shader != null ? shader : Shader.Find("Standard"));
+				material = new Material(Shader.Find("Standard"));
 				material.mainTexture = texture;
 				//material.hideFlags = HideFlags.DontUnloadUnusedAsset;
 
-				materials[renderModel.diffuseTextureId] = material;
-
-				renderModels.FreeTexture(pDiffuseTexture);
+				materials[baseName + renderModel.diffuseTextureId] = material;
 			}
 			else
 			{
@@ -428,27 +272,9 @@ public class SteamVR_RenderModel : MonoBehaviour
 			}
 		}
 
-		// Delay freeing when we can since we'll often get multiple requests for the same model right
-		// after another (e.g. two controllers or two basestations).
-#if UNITY_EDITOR
-		if (!Application.isPlaying)
-			renderModels.FreeRenderModel(pRenderModel);
-		else
-#endif
-			StartCoroutine(FreeRenderModel(pRenderModel));
+		renderModels.FreeRenderModel(ref renderModel);
 
 		return new RenderModel(mesh, material);
-	}
-
-	IEnumerator FreeRenderModel(System.IntPtr pRenderModel)
-	{
-		yield return new WaitForSeconds(1.0f);
-
-		using (var holder = new RenderModelInterfaceHolder())
-		{
-			var renderModels = holder.instance;
-			renderModels.FreeRenderModel(pRenderModel);
-		}
 	}
 
 	public Transform FindComponent(string componentName)
@@ -463,17 +289,6 @@ public class SteamVR_RenderModel : MonoBehaviour
 		return null;
 	}
 
-	private void StripMesh(GameObject go)
-	{
-		var meshRenderer = go.GetComponent<MeshRenderer>();
-		if (meshRenderer != null)
-			DestroyImmediate(meshRenderer);
-
-		var meshFilter = go.GetComponent<MeshFilter>();
-		if (meshFilter != null)
-			DestroyImmediate(meshFilter);
-	}
-
 	private bool LoadComponents(RenderModelInterfaceHolder holder, string renderModelName)
 	{
 		// Disable existing components (we will re-enable them if referenced by this new model).
@@ -483,7 +298,12 @@ public class SteamVR_RenderModel : MonoBehaviour
 		{
 			var child = t.GetChild(i);
 			child.gameObject.SetActive(false);
-			StripMesh(child.gameObject);
+			var meshRenderer = child.GetComponent<MeshRenderer>();
+			if (meshRenderer != null)
+				Object.DestroyImmediate(meshRenderer);
+			var meshFilter = child.GetComponent<MeshFilter>();
+			if (meshFilter != null)
+				Object.DestroyImmediate(meshFilter);
 		}
 
 		// If no model specified, we're done; return success.
@@ -576,14 +396,14 @@ public class SteamVR_RenderModel : MonoBehaviour
 			return;
 		}
 
-		var system = OpenVR.System;
-		if (system != null && system.IsTrackedDeviceConnected((uint)index))
+		if (SteamVR.active)
 		{
-			UpdateModel();
+			var vr = SteamVR.instance;
+			if (vr.hmd.IsTrackedDeviceConnected((uint)index))
+				UpdateModel();
 		}
 
 		SteamVR_Utils.Event.Listen("device_connected", OnDeviceConnected);
-		SteamVR_Utils.Event.Listen("hide_render_models", OnHideRenderModels);
 	}
 
 	void OnDisable()
@@ -593,7 +413,6 @@ public class SteamVR_RenderModel : MonoBehaviour
 			return;
 #endif
 		SteamVR_Utils.Event.Remove("device_connected", OnDeviceConnected);
-		SteamVR_Utils.Event.Remove("hide_render_models", OnHideRenderModels);
 	}
 
 #if UNITY_EDITOR
@@ -617,23 +436,7 @@ public class SteamVR_RenderModel : MonoBehaviour
 			{
 				foreach (var f in fields)
 				{
-					if (!values.Contains(f))
-					{
-						modified = true;
-						break;
-					}
-
-					var v0 = values[f];
-                    var v1 = f.GetValue(this);
-					if (v1 != null)
-					{
-						if (!v1.Equals(v0))
-						{
-							modified = true;
-							break;
-						}
-					}
-					else if (v0 != null)
+					if (!values.Contains(f) || !f.GetValue(this).Equals(values[f]))
 					{
 						modified = true;
 						break;
@@ -643,11 +446,7 @@ public class SteamVR_RenderModel : MonoBehaviour
 
 			if (modified)
 			{
-				if (renderModelName != modelOverride)
-				{
-					renderModelName = modelOverride;
-					SetModel(modelOverride);
-				}
+				SetModel(modelOverride);
 
 				values = new Hashtable();
 				foreach (var f in fields)
@@ -659,49 +458,43 @@ public class SteamVR_RenderModel : MonoBehaviour
 #endif
 		// Update component transforms dynamically.
 		if (updateDynamically)
-			UpdateComponents();
-	}
-
-	public void UpdateComponents()
-	{
-		var t = transform;
-		if (t.childCount == 0)
-			return;
-
-		using (var holder = new RenderModelInterfaceHolder())
 		{
-			var controllerState = (index != SteamVR_TrackedObject.EIndex.None) ?
-				SteamVR_Controller.Input((int)index).GetState() : new VRControllerState_t();
-
-			for (int i = 0; i < t.childCount; i++)
+			using (var holder = new RenderModelInterfaceHolder())
 			{
-				var child = t.GetChild(i);
+				var controllerState = SteamVR_Controller.Input((int)index).GetState();
 
-				var renderModels = holder.instance;
-				if (renderModels == null)
-					break;
+				var t = transform;
+				var baseTransform = new SteamVR_Utils.RigidTransform(t);
 
-				var componentState = new RenderModel_ComponentState_t();
-				var componentModeState = new RenderModel_ControllerMode_State_t();
-                if (!renderModels.GetComponentState(renderModelName, child.name, ref controllerState, ref componentModeState, ref componentState))
-					continue;
-
-				var componentTransform = new SteamVR_Utils.RigidTransform(componentState.mTrackingToComponentRenderModel);
-				child.localPosition = componentTransform.pos;
-				child.localRotation = componentTransform.rot;
-
-				var attach = child.FindChild(k_localTransformName);
-				if (attach != null)
+				for (int i = 0; i < t.childCount; i++)
 				{
-					var attachTransform = new SteamVR_Utils.RigidTransform(componentState.mTrackingToComponentLocal);
-					attach.position = t.TransformPoint(attachTransform.pos);
-					attach.rotation = t.rotation * attachTransform.rot;
-				}
+					var child = t.GetChild(i);
 
-				bool visible = (componentState.uProperties & (uint)EVRComponentProperty.IsVisible) != 0;
-				if (visible != child.gameObject.activeSelf)
-				{
-					child.gameObject.SetActive(visible);
+					var renderModels = holder.instance;
+					if (renderModels == null)
+						break;
+
+					var componentState = new RenderModel_ComponentState_t();
+					if (!renderModels.GetComponentState(renderModelName, child.name, ref controllerState, ref componentState))
+						continue;
+
+					var componentTransform = new SteamVR_Utils.RigidTransform(componentState.mTrackingToComponentRenderModel);
+					child.localPosition = componentTransform.pos;
+					child.localRotation = componentTransform.rot;
+
+					var attach = child.FindChild(k_localTransformName);
+					if (attach != null)
+					{
+						var attachTransform = baseTransform * new SteamVR_Utils.RigidTransform(componentState.mTrackingToComponentLocal);
+						attach.position = attachTransform.pos;
+						attach.rotation = attachTransform.rot;
+					}
+
+					bool visible = (componentState.uProperties & (uint)EVRComponentProperty.IsVisible) != 0;
+					if (visible != child.gameObject.activeSelf)
+					{
+						child.gameObject.SetActive(visible);
+					}
 				}
 			}
 		}

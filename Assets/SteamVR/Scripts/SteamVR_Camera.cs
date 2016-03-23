@@ -18,10 +18,6 @@ public class SteamVR_Camera : MonoBehaviour
 	public Transform offset { get { return _head; } } // legacy
 	public Transform origin { get { return _head.parent; } }
 
-	[SerializeField]
-	private Transform _ears;
-	public Transform ears { get { return _ears; } }
-
 	public Ray GetRay()
 	{
 		return new Ray(_head.position, _head.forward);
@@ -69,11 +65,9 @@ public class SteamVR_Camera : MonoBehaviour
 			_sceneTexture = new RenderTexture(w, h, 0, format);
 			_sceneTexture.antiAliasing = aa;
 
-#if (UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
 			// OpenVR assumes floating point render targets are linear unless otherwise specified.
 			var colorSpace = (hdr && QualitySettings.activeColorSpace == ColorSpace.Gamma) ? EColorSpace.Gamma : EColorSpace.Auto;
-			SteamVR.Unity.SetColorSpace(colorSpace);
-#endif
+            Unity.SetColorSpace(colorSpace);
 		}
 
 		return _sceneTexture;
@@ -90,33 +84,6 @@ public class SteamVR_Camera : MonoBehaviour
 
 	void OnEnable()
 	{
-#if !(UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
-		// Convert camera rig for native OpenVR integration.
-		var t = transform;
-		if (head != t)
-		{
-			Expand();
-
-			t.parent = origin;
-
-			while (head.childCount > 0)
-				head.GetChild(0).parent = t;
-			DestroyImmediate(head.gameObject);
-			_head = t;
-		}
-
-		if (flip != null)
-		{
-			DestroyImmediate(flip);
-			flip = null;
-		}
-
-		if (!SteamVR.usingNativeSupport)
-		{
-			enabled = false;
-			return;
-		}
-#else
 		// Bail if no hmd is connected
 		var vr = SteamVR.instance;
 		if (vr == null)
@@ -134,13 +101,13 @@ public class SteamVR_Camera : MonoBehaviour
 			return;
 		}
 
-		// Ensure rig is properly set up
-		Expand();
-
 		if (blitMaterial == null)
 		{
 			blitMaterial = new Material(Shader.Find("Custom/SteamVR_Blit"));
 		}
+
+		// Ensure rig is properly set up
+		Expand();
 
 		// Set remaining hmd specific settings
 		var camera = GetComponent<Camera>();
@@ -163,8 +130,7 @@ public class SteamVR_Camera : MonoBehaviour
 			headCam.hdr = camera.hdr;
 			headCam.renderingPath = camera.renderingPath;
 		}
-#endif
-		ears.GetComponent<SteamVR_Ears>().vrcam = this;
+
 		SteamVR_Render.Add(this);
 	}
 
@@ -200,22 +166,19 @@ public class SteamVR_Camera : MonoBehaviour
 				if (c != null && c != this)
 				{
 					if (c.flip != null)
-						DestroyImmediate(c.flip);
-					DestroyImmediate(c);
+						Object.DestroyImmediate(c.flip);
+					Object.DestroyImmediate(c);
 				}
 			}
 
 			components = GetComponents<Component>();
 
-#if !(UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
-			if (this != components[components.Length - 1])
-			{
-#else
 			if (this != components[components.Length - 1] || flip == null)
 			{
+				var go = gameObject;
 				if (flip == null)
-					flip = gameObject.AddComponent<SteamVR_CameraFlip>();
-#endif
+					flip = go.AddComponent<SteamVR_CameraFlip>();
+
 				// Store off values to be restored on new instance
 				values = new Hashtable();
 				var fields = GetType().GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
@@ -223,8 +186,7 @@ public class SteamVR_Camera : MonoBehaviour
 					if (f.IsPublic || f.IsDefined(typeof(SerializeField), true))
 						values[f] = f.GetValue(this);
 
-				var go = gameObject;
-				DestroyImmediate(this);
+				GameObject.DestroyImmediate(this);
 				go.AddComponent<SteamVR_Camera>().ForceLast();
 			}
 		}
@@ -238,10 +200,10 @@ public class SteamVR_Camera : MonoBehaviour
 	public bool isExpanded { get { return head != null && transform.parent == head; } }
 #endif
 	const string eyeSuffix = " (eye)";
-	const string earsSuffix = " (ears)";
 	const string headSuffix = " (head)";
 	const string originSuffix = " (origin)";
 	public string baseName { get { return name.EndsWith(eyeSuffix) ? name.Substring(0, name.Length - eyeSuffix.Length) : name; } }
+	static readonly System.Type[] headTypes = { typeof(AudioListener), typeof(GUILayer), typeof(FlareLayer) };
 
 	// Object hierarchy creation to make it easy to parent other objects appropriately,
 	// otherwise this gets called on demand at runtime. Remaining initialization is
@@ -277,6 +239,9 @@ public class SteamVR_Camera : MonoBehaviour
 			camera.useOcclusionCulling = false;
 		}
 
+		if (!name.EndsWith(eyeSuffix))
+			name += eyeSuffix;
+
 		if (transform.parent != head)
 		{
 			transform.parent = head;
@@ -287,27 +252,16 @@ public class SteamVR_Camera : MonoBehaviour
 			while (transform.childCount > 0)
 				transform.GetChild(0).parent = head;
 
-			var guiLayer = GetComponent<GUILayer>();
-			if (guiLayer != null)
+			foreach (var type in headTypes)
 			{
-				DestroyImmediate(guiLayer);
-				head.gameObject.AddComponent<GUILayer>();
-			}
-
-			var audioListener = GetComponent<AudioListener>();
-			if (audioListener != null)
-			{
-				DestroyImmediate(audioListener);
-				_ears = new GameObject(name + earsSuffix, typeof(SteamVR_Ears)).transform;
-				ears.parent = _head;
-				ears.localPosition = Vector3.zero;
-				ears.localRotation = Quaternion.identity;
-				ears.localScale = Vector3.one;
+				var component = GetComponent(type);
+				if (component != null)
+				{
+					Object.DestroyImmediate(component);
+					head.gameObject.AddComponent(type);
+				}
 			}
 		}
-
-		if (!name.EndsWith(eyeSuffix))
-			name += eyeSuffix;
 	}
 
 	public void Collapse()
@@ -318,22 +272,14 @@ public class SteamVR_Camera : MonoBehaviour
 		while (head.childCount > 0)
 			head.GetChild(0).parent = transform;
 
-		var guiLayer = head.GetComponent<GUILayer>();
-		if (guiLayer != null)
+		foreach (var type in headTypes)
 		{
-			DestroyImmediate(guiLayer);
-			gameObject.AddComponent<GUILayer>();
-		}
-
-		if (ears != null)
-		{
-			while (ears.childCount > 0)
-				ears.GetChild(0).parent = transform;
-
-			DestroyImmediate(ears.gameObject);
-			_ears = null;
-
-			gameObject.AddComponent(typeof(AudioListener));
+			var component = head.GetComponent(type);
+			if (component != null)
+			{
+				Object.DestroyImmediate(component);
+				gameObject.AddComponent(type);
+			}
 		}
 
 		if (origin != null)
@@ -346,7 +292,7 @@ public class SteamVR_Camera : MonoBehaviour
 				while (_origin.childCount > 0)
 					_origin.GetChild(0).parent = _origin.parent;
 
-				DestroyImmediate(_origin.gameObject);
+				Object.DestroyImmediate(_origin.gameObject);
 			}
 			else
 			{
@@ -354,7 +300,7 @@ public class SteamVR_Camera : MonoBehaviour
 			}
 		}
 
-		DestroyImmediate(head.gameObject);
+		Object.DestroyImmediate(head.gameObject);
 		_head = null;
 
 		if (name.EndsWith(eyeSuffix))
@@ -362,8 +308,6 @@ public class SteamVR_Camera : MonoBehaviour
 	}
 
 	#endregion
-
-#if (UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
 
 	#region Render callbacks
 
@@ -394,13 +338,13 @@ public class SteamVR_Camera : MonoBehaviour
 			if (SteamVR_Render.eye == EVREye.Eye_Left)
 			{
 				// Get gpu started on work early to avoid bubbles at the top of the frame.
-				SteamVR_Utils.QueueEventOnRenderThread(SteamVR.Unity.k_nRenderEventID_Flush);
+				SteamVR_Utils.QueueEventOnRenderThread(Unity.k_nRenderEventID_Flush);
 
-				eventID = SteamVR.Unity.k_nRenderEventID_SubmitL;
+				eventID = Unity.k_nRenderEventID_SubmitL;
 			}
 			else
 			{
-				eventID = SteamVR.Unity.k_nRenderEventID_SubmitR;
+				eventID = Unity.k_nRenderEventID_SubmitR;
 			}
 
 			// Queue up a call on the render thread to Submit our render target to the compositor.
@@ -420,12 +364,8 @@ public class SteamVR_Camera : MonoBehaviour
 		GL.TexCoord2(0.0f, 1.0f); GL.Vertex3(-1, -1, 0);
 		GL.End();
 		GL.PopMatrix();
-
-		Graphics.SetRenderTarget(null);
 	}
 
 	#endregion
-
-#endif
 }
 

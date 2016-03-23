@@ -74,13 +74,6 @@ public class SteamVR_TrackedObject : MonoBehaviour
 
 	void OnEnable()
 	{
-		var render = SteamVR_Render.instance;
-		if (render == null)
-		{
-			enabled = false;
-			return;
-		}
-
 		SteamVR_Utils.Event.Listen("new_poses", OnNewPoses);
 	}
 

@@ -16,8 +16,8 @@ public class SteamVR_TestController : MonoBehaviour
 	{
 		var index = (int)args[0];
 
-		var system = OpenVR.System;
-		if (system == null || system.GetTrackedDeviceClass((uint)index) != ETrackedDeviceClass.Controller)
+		var vr = SteamVR.instance;
+		if (vr.hmd.GetTrackedDeviceClass((uint)index) != ETrackedDeviceClass.Controller)
 			return;
 
 		var connected = (bool)args[1];

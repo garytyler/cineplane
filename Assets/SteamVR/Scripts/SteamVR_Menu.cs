@@ -5,7 +5,6 @@
 //=============================================================================
 
 using UnityEngine;
-using Valve.VR;
 
 public class SteamVR_Menu : MonoBehaviour
 {
@@ -175,21 +174,20 @@ public class SteamVR_Menu : MonoBehaviour
 			tracker.wireframe = GUILayout.Toggle(tracker.wireframe, "Wireframe");
 
 			var render = SteamVR_Render.instance;
-			if (render.trackingSpace == ETrackingUniverseOrigin.TrackingUniverseSeated)
+			if (render.trackingSpace == Valve.VR.ETrackingUniverseOrigin.TrackingUniverseSeated)
 			{
 				if (GUILayout.Button("Switch to Standing"))
-					render.trackingSpace = ETrackingUniverseOrigin.TrackingUniverseStanding;
+					render.trackingSpace = Valve.VR.ETrackingUniverseOrigin.TrackingUniverseStanding;
 				if (GUILayout.Button("Center View"))
 				{
-					var system = OpenVR.System;
-					if (system != null)
-						system.ResetSeatedZeroPose();
+					var vr = SteamVR.instance;
+					vr.hmd.ResetSeatedZeroPose();
 				}
 			}
 			else
 			{
 				if (GUILayout.Button("Switch to Seated"))
-					render.trackingSpace = ETrackingUniverseOrigin.TrackingUniverseSeated;
+					render.trackingSpace = Valve.VR.ETrackingUniverseOrigin.TrackingUniverseSeated;
 			}
 		}
 
