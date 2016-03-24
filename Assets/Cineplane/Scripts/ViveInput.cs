@@ -109,7 +109,7 @@ public class ViveInput : MonoBehaviour
 			return 0;
 		var state = new VRControllerState_t();
 		var success = vr.hmd.GetControllerState(controller, ref state);
-		return state.rAxis [0].x;
+		return state.rAxis0.x;
 	}
 
 	float GetTouchPadY(SteamVR vr, uint controller)
@@ -118,7 +118,7 @@ public class ViveInput : MonoBehaviour
 			return 0;
 		var state = new VRControllerState_t();
 		var success = vr.hmd.GetControllerState(controller, ref state);
-		return state.rAxis [0].y;
+		return state.rAxis0.y;
 	}
 
 	void HapticPulse()
