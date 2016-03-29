@@ -12,9 +12,11 @@ public class ViveInput : MonoBehaviour
 	
 	public GameObject leftControllerObject;
 	public GameObject rightControllerObject;
-		
-    public void Update()
-    {
+
+
+    public void Update() {
+        
+    
 		if (!testMode) {
 			var vr = SteamVR.instance;
 			ViveWand[] viveWands = {left, right};
